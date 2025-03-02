@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from database import questions_collection, users_collection
-import random
+from database import get_questions_collection, get_users_collection
 
 app = Flask(__name__)
 CORS(app)
@@ -9,7 +8,8 @@ CORS(app)
 # Get Random Question
 @app.route("/question", methods=["GET"])
 def get_question():
-    question = questions_collection.aggregate([{ "$sample": { "size": 1 } }]).next()
+    collection = get_questions_collection()
+    question = collection.aggregate([{ "$sample": { "size": 1 } }]).next()
     del question["_id"]  # Remove MongoDB ID field
     return jsonify(question)
 
@@ -20,7 +20,8 @@ def check_answer():
     user_answer = data.get("user_answer")
     destination = data.get("destination")
 
-    question = questions_collection.find_one({"destination": destination})
+    collection = get_questions_collection()
+    question = collection.find_one({"destination": destination})
     
     if question and user_answer == question["correct_answer"]:
         return jsonify({"correct": True, "fun_fact": question["fun_fact"]})
@@ -32,16 +33,18 @@ def register_user():
     data = request.json
     username = data.get("username")
 
-    if users_collection.find_one({"username": username}):
+    collection = get_users_collection()
+    if collection.find_one({"username": username}):
         return jsonify({"message": "Username already taken!"}), 400
     
-    users_collection.insert_one({"username": username, "score": 0})
+    collection.insert_one({"username": username, "score": 0})
     return jsonify({"message": "User registered successfully!"})
 
 # Get User Score
 @app.route("/score/<username>", methods=["GET"])
 def get_score(username):
-    user = users_collection.find_one({"username": username})
+    collection = get_users_collection()
+    user = collection.find_one({"username": username})
     if user:
         return jsonify({"username": username, "score": user["score"]})
     return jsonify({"message": "User not found"}), 404
