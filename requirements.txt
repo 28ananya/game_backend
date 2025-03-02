@@ -4,3 +4,5 @@ flask-pymongo
 requests
 pymongo
 dnspython
+gunicorn
+
